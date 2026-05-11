@@ -1,0 +1,46 @@
+models:
+  - name: Qwen3-Embedding-0.6B
+    type: embedding
+    model_id: Qwen/Qwen3-Embedding-0.6B
+    params: 0.6B
+    pooling: cls  # CLS token pooling
+
+  - name: Qwen3-Embedding-4B
+    type: embedding
+    model_id: Qwen/Qwen3-Embedding-4B
+    params: 4B
+    pooling: cls
+
+  - name: bge-m3
+    type: embedding
+    model_id: BAAI/bge-m3
+    params: 0.6B
+    pooling: mean  # mean pooling with instruction prefix
+
+  - name: Qwen3-Reranker-0.6B
+    type: reranker
+    model_id: Qwen/Qwen3-Reranker-0.6B
+    params: 0.6B
+
+  - name: Qwen3-Reranker-4B
+    type: reranker
+    model_id: Qwen/Qwen3-Reranker-4B
+    params: 4B
+
+  - name: bge-reranker-v2-m3
+    type: reranker
+    model_id: BAAI/bge-reranker-v2-m3
+    params: 0.6B
+
+# TEI Docker image
+tei:
+  image: ghcr.io/huggingface/text-embeddings-inference:latest
+
+# Test parameters
+test:
+  batch_sizes: [1, 2, 3, 4, 6, 10, 20, 32, 64]
+  concurrency_levels: [1, 4, 8, 16]
+  text_lengths: [short, medium, long]
+  warmup_rounds: 3
+  measure_rounds: 3
+  throughput_duration_sec: 30

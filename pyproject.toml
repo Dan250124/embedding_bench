@@ -1,0 +1,15 @@
+[project]
+name = "embedding-bench"
+version = "0.1.0"
+description = "Benchmark embedding and reranker models across inference frameworks"
+requires-python = ">=3.11"
+dependencies = [
+    "torch",
+    "transformers",
+    "vllm",
+    "aiohttp",
+    "numpy",
+    "matplotlib",
+    "tqdm",
+    "pyyaml",
+]
