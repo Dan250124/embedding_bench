@@ -10,6 +10,13 @@
   - TEI: Docker 容器 (无成熟 pip 包)
 - 同一时间只运行一个模型服务，避免 GPU 资源争抢
 
+### 软件版本
+
+| 组件 | 版本 | 备注 |
+|------|------|------|
+| TEI (Docker) | `ghcr.io/huggingface/text-embeddings-inference:120-1.9` | experimental，支持 RTX 5090 (sm_120) |
+| vLLM | `0.20.1` | 本地安装，`runner="pooling"` 模式 |
+
 ## 模型清单
 
 | 类型 | 模型 | 参数量 | ModelScope 路径 |
@@ -82,7 +89,75 @@ uv sync
 uv run python data/generate_corpus.py
 ```
 
-### 2. 运行测试
+### 2. 启动推理服务
+
+#### TEI (Docker)
+
+```bash
+# Embedding 模型 (以 bge-m3 为例)
+docker run --gpus all -p 8080:80 \
+    -v ~/.cache/modelscope/hub/BAAI/bge-m3:/data \
+    --name tei-bge-m3 --rm -d \
+    ghcr.io/huggingface/text-embeddings-inference:120-1.9 \
+    --model-id /data
+
+# Reranker 模型 (以 bge-reranker-v2-m3 为例)
+docker run --gpus all -p 8081:80 \
+    -v ~/.cache/modelscope/hub/BAAI/bge-reranker-v2-m3:/data \
+    --name tei-bge-reranker --rm -d \
+    ghcr.io/huggingface/text-embeddings-inference:120-1.9 \
+    --model-id /data
+
+# 或使用项目脚本 (含健康检查)
+./scripts/start_tei.sh ~/.cache/modelscope/hub/BAAI/bge-m3 8080
+
+# 停止服务
+./scripts/stop_tei.sh 8080
+```
+
+#### vLLM (本地)
+
+```bash
+# Embedding 模型
+uv run vllm serve Qwen/Qwen3-Embedding-0.6B \
+    --host 0.0.0.0 --port 8080 \
+    --runner pooling \
+    --gpu-memory-utilization 0.3
+
+# Reranker 模型
+uv run vllm serve Qwen/Qwen3-Reranker-0.6B \
+    --host 0.0.0.0 --port 8080 \
+    --runner pooling \
+    --gpu-memory-utilization 0.3
+```
+
+> vLLM 和 Transformers 框架的测试由 `main.py` 自动加载模型，无需手动启动服务。
+
+### 3. API 调用示例
+
+启动服务后，可通过 HTTP 接口调用：
+
+```bash
+# Embedding - 获取文本向量
+curl -X POST http://localhost:8000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input": "What is machine learning?", "model": "Qwen/Qwen3-Embedding-4B", "encoding_format": "float"}'
+
+# Reranker - 对文档重排序
+curl http://localhost:8000/v1/rerank \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-Reranker-4B",
+    "query": "什么是通义千问？",
+    "documents": [
+      "北京是中国的首都，拥有悠久的历史。",
+      "通义千问是阿里云推出的一款超大规模语言模型。",
+      "我今天中午吃了一碗牛肉面，味道非常不错。"
+    ]
+  }'
+```
+
+### 4. 运行测试
 
 ```bash
 # 全量测试 (所有模型 x 所有框架)
